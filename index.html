@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RCP HERO — Dashboard Docente</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg:    #080810;
+  --bg2:   #0E0E18;
+  --bg3:   #14141F;
+  --red:   #FF1E2D;
+  --red2:  #FF4D57;
+  --cyan:  #00D4FF;
+  --green: #00FF88;
+  --gold:  #FFD700;
+  --purple:#A855F7;
+  --orange:#FF8C00;
+  --border:rgba(255,255,255,.08);
+  --text:  #E8E8F0;
+  --muted: #9898C0;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:var(--bg); color:var(--text); font-family:'Exo 2',sans-serif; min-height:100vh; }
+
+/* HEADER */
+.top-bar { background:linear-gradient(135deg,#1A0000,#CC0000); padding:14px 24px; display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--red); }
+.top-logo { font-family:'Orbitron',monospace; font-size:22px; font-weight:900; color:#fff; letter-spacing:2px; }
+.top-logo span { color:var(--red2); }
+.top-info { text-align:right; }
+.top-update { font-size:11px; color:rgba(255,255,255,.6); font-family:'Share Tech Mono',monospace; }
+.top-badge { background:rgba(255,255,255,.15); border-radius:20px; padding:3px 12px; font-size:10px; color:#fff; display:inline-block; margin-top:3px; }
+
+/* LOADING */
+.loading { display:flex; flex-direction:column; align-items:center; justify-content:center; height:80vh; gap:16px; }
+.loading-ecg { width:200px; height:40px; }
+.loading-ecgp { fill:none; stroke:var(--green); stroke-width:2; stroke-dasharray:400; stroke-dashoffset:400; animation:ecgaim 1.5s ease forwards infinite; filter:drop-shadow(0 0 6px var(--green)); }
+@keyframes ecgaim { 0%{stroke-dashoffset:400} 100%{stroke-dashoffset:-400} }
+.loading-txt { font-family:'Orbitron',monospace; font-size:13px; color:var(--green); letter-spacing:3px; animation:pulse 1s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+
+/* MAIN */
+.main { padding:20px 24px; max-width:1400px; margin:0 auto; }
+
+/* METRICS */
+.metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
+.metric { background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; text-align:center; transition:transform .2s; }
+.metric:hover { transform:translateY(-2px); }
+.metric-icon { font-size:24px; margin-bottom:6px; }
+.metric-val { font-family:'Orbitron',monospace; font-size:32px; font-weight:900; line-height:1; }
+.metric-lbl { font-size:10px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; margin-top:5px; }
+.metric-sub { font-size:10px; color:var(--muted); margin-top:3px; font-family:'Share Tech Mono',monospace; }
+.m-cyan   { color:var(--cyan);   border-top:3px solid var(--cyan); }
+.m-green  { color:var(--green);  border-top:3px solid var(--green); }
+.m-gold   { color:var(--gold);   border-top:3px solid var(--gold); }
+.m-red    { color:var(--red2);   border-top:3px solid var(--red2); }
+
+/* SECTION TITLE */
+.sec-title { font-family:'Orbitron',monospace; font-size:10px; letter-spacing:3px; color:var(--muted); text-transform:uppercase; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.sec-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+/* CARDS */
+.card { background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; }
+.card-title { font-size:10px; font-weight:700; color:var(--muted); letter-spacing:2px; text-transform:uppercase; margin-bottom:14px; }
+
+/* CHARTS ROW */
+.row-2 { display:grid; grid-template-columns:1.4fr 1fr; gap:14px; margin-bottom:16px; }
+.row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-bottom:16px; }
+.row-full { margin-bottom:16px; }
+
+/* RANKING TABLE */
+.rank-table { width:100%; border-collapse:collapse; }
+.rank-table th { background:rgba(255,255,255,.04); color:var(--muted); font-size:9px; letter-spacing:1.5px; text-transform:uppercase; padding:7px 10px; text-align:left; border-bottom:1px solid var(--border); }
+.rank-table td { padding:8px 10px; border-bottom:1px solid rgba(255,255,255,.04); font-size:12px; vertical-align:middle; }
+.rank-table tr:hover td { background:rgba(255,255,255,.02); }
+.rank-pos { font-size:18px; text-align:center !important; }
+.rank-nombre { font-weight:700; }
+.nivel-pill { font-size:9px; padding:2px 8px; border-radius:10px; font-weight:600; white-space:nowrap; }
+.np-prin  { background:#1a1a2e; color:#888; }
+.np-resp  { background:#3E2000; color:#FF9800; }
+.np-pro   { background:#0A2400; color:#00C853; }
+.np-av    { background:#001A3E; color:#2196F3; }
+.np-leg   { background:#2A0000; color:#FF4D57; }
+.prec-badge { font-size:11px; font-weight:700; padding:3px 9px; border-radius:6px; }
+.pb-g { background:rgba(0,200,83,.15); color:#00C853; }
+.pb-y { background:rgba(255,215,0,.15); color:var(--gold); }
+.pb-r { background:rgba(255,77,87,.15); color:var(--red2); }
+.barra-txt { font-family:'Courier New',monospace; font-size:10px; color:var(--muted); }
+.barra-txt span { color:var(--green); }
+
+/* ALERTAS */
+.alerta-card { background:rgba(183,28,28,.08); border:1px solid rgba(183,28,28,.3); border-radius:12px; padding:14px; }
+.alerta-header { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+.alerta-dot { width:8px; height:8px; border-radius:50%; background:var(--red2); animation:blink 1s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+.alerta-title { font-family:'Orbitron',monospace; font-size:10px; letter-spacing:2px; color:var(--red2); }
+.alerta-row { display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid rgba(183,28,28,.1); }
+.alerta-row:last-child { border:none; }
+.alerta-nombre { font-weight:700; font-size:12px; flex:1; }
+.alerta-errs { font-size:11px; color:var(--red2); font-weight:700; min-width:50px; }
+.alerta-prio { font-size:9px; padding:2px 8px; border-radius:10px; font-weight:700; }
+.prio-alta  { background:rgba(183,28,28,.3); color:#FF4D57; }
+.prio-media { background:rgba(230,81,0,.3); color:#FF9800; }
+.prio-baja  { background:rgba(255,215,0,.15); color:var(--gold); }
+.alerta-rec { font-size:10px; color:var(--muted); margin-left:auto; max-width:160px; text-align:right; }
+
+/* INSIGNIAS RESUMEN */
+.ins-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:8px; }
+.ins-card { background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:10px; display:flex; align-items:center; gap:10px; }
+.ins-icon { font-size:22px; flex-shrink:0; }
+.ins-info { flex:1; min-width:0; }
+.ins-nombre { font-size:11px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ins-estudiante { font-size:9px; color:var(--muted); margin-top:2px; }
+.ins-ganada { color:var(--gold); }
+.ins-pendiente { opacity:.3; }
+
+/* PRIMER FALLO */
+.fallo-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.fallo-lbl { font-size:11px; color:var(--text); min-width:60px; }
+.fallo-bar { flex:1; background:rgba(255,255,255,.06); border-radius:4px; height:18px; overflow:hidden; }
+.fallo-fill { height:100%; border-radius:4px; display:flex; align-items:center; padding-left:8px; font-size:10px; font-weight:700; transition:width .8s ease; }
+.fallo-count { font-size:11px; color:var(--muted); min-width:20px; text-align:right; }
+
+/* MOTIVACION */
+.motiv-card { background:linear-gradient(135deg,rgba(0,255,136,.06),rgba(0,212,255,.06)); border:1px solid rgba(0,255,136,.2); border-radius:12px; padding:14px; }
+.motiv-row { display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid rgba(0,255,136,.06); }
+.motiv-row:last-child { border:none; }
+.motiv-nombre { font-weight:700; font-size:12px; flex:1; }
+.motiv-msg { font-size:11px; color:var(--muted); }
+
+/* ECG footer */
+.footer { text-align:center; padding:16px; font-size:10px; color:var(--muted); font-family:'Share Tech Mono',monospace; border-top:1px solid var(--border); margin-top:8px; }
+
+@media(max-width:900px) {
+  .metrics { grid-template-columns:repeat(2,1fr); }
+  .row-2,.row-3 { grid-template-columns:1fr; }
+}
+@media(max-width:500px) {
+  .metrics { grid-template-columns:1fr 1fr; }
+  .main { padding:12px; }
+}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div>
+    <div class="top-logo">RCP <span>HERO</span></div>
+    <div class="top-update">Dashboard Docente · Datos en vivo desde Google Sheets</div>
+  </div>
+  <div class="top-info">
+    <div class="top-update" id="update-time">Cargando...</div>
+    <div class="top-badge">🫀 RCP HERO v3 · AHA 2025</div>
+  </div>
+</div>
+
+<div class="loading" id="loading">
+  <svg class="loading-ecg" viewBox="0 0 200 40">
+    <path class="loading-ecgp" d="M0,20 L30,20 L35,20 L38,8 L41,32 L44,12 L47,20 L80,20 L85,8 L88,32 L91,12 L94,20 L130,20 L135,8 L138,32 L141,12 L144,20 L170,20 L175,8 L178,32 L181,12 L184,20 L200,20"/>
+  </svg>
+  <div class="loading-txt">CARGANDO DATOS...</div>
+</div>
+
+<div class="main" id="dashboard" style="display:none">
+
+  <!-- MÉTRICAS -->
+  <div class="metrics" id="metrics-row"></div>
+
+  <!-- FILA 1: Precisión + Dona niveles -->
+  <div class="sec-title">Rendimiento del grupo</div>
+  <div class="row-2">
+    <div class="card">
+      <div class="card-title">Precisión por estudiante</div>
+      <div style="position:relative;height:220px"><canvas id="chart-prec"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Distribución de niveles</div>
+      <div style="position:relative;height:220px"><canvas id="chart-niveles"></canvas></div>
+    </div>
+  </div>
+
+  <!-- FILA 2: Progreso horizontal -->
+  <div class="row-full card">
+    <div class="card-title">Progreso de misiones por estudiante</div>
+    <div style="position:relative;" id="chart-progreso-wrap"><canvas id="chart-progreso"></canvas></div>
+  </div>
+
+  <!-- FILA 3: Primer fallo + Motivación -->
+  <div class="sec-title">Diagnóstico pedagógico</div>
+  <div class="row-2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-title">Primer fallo más frecuente (OE1)</div>
+      <div id="fallos-container"></div>
+    </div>
+    <div class="motiv-card">
+      <div class="card-title" style="color:var(--green)">Mensajes motivacionales activos</div>
+      <div id="motivacion-container"></div>
+    </div>
+  </div>
+
+  <!-- RANKING -->
+  <div class="sec-title">Ranking de estudiantes</div>
+  <div class="card row-full" style="margin-bottom:16px;overflow-x:auto">
+    <table class="rank-table" id="ranking-table">
+      <thead>
+        <tr>
+          <th style="width:40px">Rank</th>
+          <th>Estudiante</th>
+          <th>Nivel</th>
+          <th>Sesiones</th>
+          <th>Completadas</th>
+          <th>Insignias</th>
+          <th>Precisión</th>
+          <th>Errores</th>
+          <th>Puntos</th>
+          <th>Progreso</th>
+        </tr>
+      </thead>
+      <tbody id="ranking-body"></tbody>
+    </table>
+  </div>
+
+  <!-- ALERTAS + INSIGNIAS -->
+  <div class="row-2" style="margin-bottom:16px">
+    <div id="alertas-container"></div>
+    <div class="card">
+      <div class="card-title">Insignias ganadas por el grupo</div>
+      <div class="ins-grid" id="insignias-container"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer" id="footer-bar">RCP HERO · ivancho0722.github.io/rcp-hero/ · Dashboard generado automáticamente desde Google Sheets</div>
+
+<script>
+// ══ CONFIGURACIÓN ══
+'https://script.google.com/macros/s/AKfycbzdgEimwHUvIZz3expOqeJni9Ka6WNW-Pa2vGhAGszI-TZ-0s41J2IWxwxXMFJbb6Xs/exec';
+
+const INSIGNIAS = {
+  'E1':{icon:'🚶',nombre:'Primer Respondedor'},
+  'E2':{icon:'📚',nombre:'Guardián del Aula'},
+  'E3':{icon:'🍽️',nombre:'Héroe de la Cafetería'},
+  'E4':{icon:'📖',nombre:'Custodio del Saber'},
+  'E5':{icon:'🌳',nombre:'Ángel del Parque'},
+  'M1':{icon:'🎭',nombre:'Héroe del Escenario'},
+  'M2':{icon:'🏃',nombre:'Campeón de Cancha'},
+  'M3':{icon:'🚻',nombre:'Rescate Silencioso'},
+  'M4':{icon:'🚌',nombre:'Guardián del Bus'},
+  'M5':{icon:'🚪',nombre:'Héroe de la Entrada'},
+  'H1':{icon:'👩‍🏫',nombre:'Alumno que Salva'},
+  'H2':{icon:'🏠',nombre:'Guardián del Hogar'},
+  'H3':{icon:'🏪',nombre:'Héroe de la Tienda'},
+  'H4':{icon:'🏬',nombre:'Líder en el Caos'},
+  'H5':{icon:'☀️',nombre:'Resistente al Calor'},
+  'X1':{icon:'🎪',nombre:'Héroe del Estadio'},
+  'X2':{icon:'🌙',nombre:'Guardián Nocturno'},
+  'X3':{icon:'👥',nombre:'Decisor Maestro'},
+  'X4':{icon:'🌧️',nombre:'Imparable'},
+  'X5':{icon:'🏔️',nombre:'Héroe en la Cima'}
+};
+
+const MISIONES = ['E1','E2','E3','E4','E5','M1','M2','M3','M4','M5','H1','H2','H3','H4','H5','X1','X2','X3','X4','X5'];
+
+function calcularNivel(pts){
+  if(pts>=1500) return {label:'🔥 HÉROE LEGENDARIO',cls:'np-leg'};
+  if(pts>=1000) return {label:'🏆 HÉROE AVANZADO',cls:'np-av'};
+  if(pts>=600)  return {label:'💪 RESPONDEDOR PRO',cls:'np-pro'};
+  if(pts>=300)  return {label:'🚑 RESPONDEDOR',cls:'np-resp'};
+  return {label:'🌱 PRINCIPIANTE',cls:'np-prin'};
+}
+
+function getMensaje(prec){
+  if(prec>=90) return '🔥 ¡Nivel experto!';
+  if(prec>=75) return '💪 Vas muy bien';
+  if(prec>=50) return '⚡ Sigue practicando';
+  return '🌱 ¡El primer paso es clave!';
+}
+
+// ══ CARGAR DATOS DESDE SHEETS ══
+async function cargarDatos(){
+  try {
+    const resp = await fetch(SHEETS_URL + '?dashboard=1&_=' + Date.now(), {
+      method: 'GET',
+      mode: 'cors',
+    });
+    const json = await resp.json();
+    if(json && json.rows && json.rows.length > 0) return json.rows;
+  } catch(e){
+    console.log('Usando datos demo:', e.message);
+  }
+  return getDemoData();
+}
+
+function getDemoData(){
+  return [
+    {nombre:'JHON SALAS',mision:'E1',estado:'COMPLETADA',puntos:70,prec:88,errores:0,primerFallo:'Paso 1',fecha:'16/3/2026'},
+    {nombre:'MARÍA JOSÉ MORENO',mision:'E1',estado:'COMPLETADA',puntos:80,prec:100,errores:0,primerFallo:'Ninguno',fecha:'16/3/2026'},
+    {nombre:'MARÍA JOSÉ MORENO',mision:'E2',estado:'COMPLETADA',puntos:80,prec:100,errores:0,primerFallo:'Ninguno',fecha:'16/3/2026'},
+    {nombre:'JOSUE VELEZ',mision:'E1',estado:'COMPLETADA',puntos:80,prec:100,errores:0,primerFallo:'Ninguno',fecha:'16/3/2026'},
+    {nombre:'SIMON BEJARANO',mision:'X1',estado:'COMPLETADA',puntos:40,prec:75,errores:0,primerFallo:'Paso 4',fecha:'16/3/2026'},
+    {nombre:'SLE',mision:'X4',estado:'FINALIZADA-SIN-INSIGNIA',puntos:0,prec:50,errores:1,primerFallo:'Paso 2',fecha:'14/3/2026'},
+    {nombre:'IVAN VALVERDE',mision:'E1',estado:'FINALIZADA-SIN-INSIGNIA',puntos:10,prec:13,errores:1,primerFallo:'Paso 1',fecha:'19/3/2026'},
+    {nombre:'IVAN VALVERDE',mision:'E1',estado:'FINALIZADA-SIN-INSIGNIA',puntos:30,prec:50,errores:1,primerFallo:'Paso 1',fecha:'19/3/2026'},
+    {nombre:'IVAN VALVERDE',mision:'E3',estado:'FINALIZADA-SIN-INSIGNIA',puntos:10,prec:13,errores:1,primerFallo:'Paso 1',fecha:'19/3/2026'},
+  ];
+}
+
+// ══ PROCESAR DATOS ══
+function procesarDatos(rows){
+  const est = {};
+  rows.forEach(r => {
+    const n = (r.nombre||'').toUpperCase().trim();
+    if(!n) return;
+    if(!est[n]) est[n] = {
+      misionesComp:{}, misionesToc:{}, fechas:{},
+      totalPts:0, sumPrec:0, cnt:0, totalErr:0
+    };
+    const e = est[n];
+    if(r.fecha) e.fechas[r.fecha]=1;
+    e.totalPts += parseFloat(r.puntos)||0;
+    e.sumPrec  += parseFloat(r.prec)||0;
+    e.cnt++;
+    e.totalErr += parseInt(r.errores)||0;
+    const m = (r.mision||'').toUpperCase();
+    if(!e.misionesToc[m]) e.misionesToc[m]={prec:parseFloat(r.prec)||0};
+    if((r.estado||'').toUpperCase()==='COMPLETADA') {
+      if(!e.misionesComp[m]) e.misionesComp[m]={prec:parseFloat(r.prec)||0};
+    }
+  });
+
+  // Construir array ordenado
+  return Object.keys(est).map(n => {
+    const e = est[n];
+    const comp = Object.keys(e.misionesComp).length;
+    const ses  = Object.keys(e.fechas).length;
+    const prec = e.cnt>0 ? Math.round(e.sumPrec/e.cnt) : 0;
+    const nivel = calcularNivel(e.totalPts);
+    const insignias = MISIONES.filter(m=>e.misionesComp[m]);
+    return {
+      nombre:n, sesiones:ses, completadas:comp,
+      precProm:prec, errores:e.totalErr,
+      puntos:Math.round(e.totalPts),
+      nivel, insignias,
+      misionesComp:e.misionesComp,
+      misionesToc:e.misionesToc
+    };
+  }).sort((a,b)=>b.puntos!==a.puntos?b.puntos-a.puntos:b.precProm-a.precProm);
+}
+
+function procesarFallos(rows){
+  const f={};
+  rows.forEach(r=>{
+    const fallo = (r.primerFallo||'').trim();
+    if(fallo && fallo!=='Ninguno' && fallo!=='0') f[fallo]=(f[fallo]||0)+1;
+  });
+  return Object.entries(f).sort((a,b)=>b[1]-a[1]);
+}
+
+// ══ RENDERIZAR ══
+function render(estudiantes, rows){
+  const total = estudiantes.length;
+  const totalComp = estudiantes.reduce((s,e)=>s+e.completadas,0);
+  const precProm = total>0?Math.round(estudiantes.reduce((s,e)=>s+e.precProm,0)/total):0;
+  const totalErr = estudiantes.reduce((s,e)=>s+e.errores,0);
+  const totalIns = estudiantes.reduce((s,e)=>s+e.insignias.length,0);
+
+  document.getElementById('update-time').textContent = 'Actualizado: ' + new Date().toLocaleString('es-CO');
+
+  // MÉTRICAS
+  const metricsData = [
+    {icon:'👥',val:total,lbl:'Estudiantes',sub:'activos',cls:'m-cyan'},
+    {icon:'✅',val:totalComp,lbl:'Misiones completadas',sub:'de '+(total*20)+' posibles',cls:'m-green'},
+    {icon:'🎯',val:precProm+'%',lbl:'Precisión promedio',sub:'umbral UCB: 75%',cls:'m-gold'},
+    {icon:'🏅',val:totalIns,lbl:'Insignias ganadas',sub:'de '+(total*20)+' posibles',cls:'m-red'},
+  ];
+  document.getElementById('metrics-row').innerHTML = metricsData.map(m=>`
+    <div class="metric ${m.cls}">
+      <div class="metric-icon">${m.icon}</div>
+      <div class="metric-val">${m.val}</div>
+      <div class="metric-lbl">${m.lbl}</div>
+      <div class="metric-sub">${m.sub}</div>
+    </div>`).join('');
+
+  // CHART PRECISIÓN
+  const labels = estudiantes.map(e=>e.nombre.split(' ')[0]);
+  const precios = estudiantes.map(e=>e.precProm);
+  const colPrec = precios.map(p=>p>=90?'#00C853':p>=70?'#FFD700':'#FF4D57');
+  new Chart(document.getElementById('chart-prec'),{
+    type:'bar',
+    data:{labels,datasets:[{data:precios,backgroundColor:colPrec,borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+'%'}}},
+      scales:{
+        y:{min:0,max:110,ticks:{callback:v=>v+'%',color:'#888',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}},
+        x:{ticks:{color:'#ccc',font:{size:10}},grid:{display:false}}
+      }
+    },
+    plugins:[{id:'ucb',afterDraw(chart){
+      const {ctx,chartArea:{left,right},scales:{y}}=chart;
+      const yp=y.getPixelForValue(75);
+      ctx.save();ctx.strokeStyle='#FF4D57';ctx.lineWidth=1.5;ctx.setLineDash([6,3]);
+      ctx.beginPath();ctx.moveTo(left,yp);ctx.lineTo(right,yp);ctx.stroke();
+      ctx.fillStyle='#FF4D57';ctx.font='10px monospace';ctx.fillText('UCB 75%',right-52,yp-4);
+      ctx.restore();
+    }}]
+  });
+
+  // CHART NIVELES
+  const nivelesCount = {'🌱 PRINCIPIANTE':0,'🚑 RESPONDEDOR':0,'💪 RESPONDEDOR PRO':0,'🏆 HÉROE AVANZADO':0,'🔥 HÉROE LEGENDARIO':0};
+  estudiantes.forEach(e=>{ nivelesCount[e.nivel.label]=(nivelesCount[e.nivel.label]||0)+1; });
+  const nvLabels = Object.keys(nivelesCount).filter(k=>nivelesCount[k]>0);
+  const nvData   = nvLabels.map(k=>nivelesCount[k]);
+  const nvColors = ['#444','#FF9800','#00C853','#2196F3','#FF4D57'];
+  new Chart(document.getElementById('chart-niveles'),{
+    type:'doughnut',
+    data:{labels:nvLabels,datasets:[{data:nvData,backgroundColor:nvColors.slice(0,nvLabels.length),borderWidth:0,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+      plugins:{legend:{position:'bottom',labels:{color:'#aaa',font:{size:10},boxWidth:10,padding:8}}}}
+  });
+
+  // CHART PROGRESO
+  const progWrap = document.getElementById('chart-progreso-wrap');
+  progWrap.style.height = (estudiantes.length*38+60)+'px';
+  new Chart(document.getElementById('chart-progreso'),{
+    type:'bar',
+    data:{
+      labels:estudiantes.map(e=>e.nombre.split(' ')[0]+' '+( e.nombre.split(' ')[1]||'').charAt(0)+'.'),
+      datasets:[
+        {label:'Completadas',data:estudiantes.map(e=>e.completadas),backgroundColor:'#00C853',borderRadius:4},
+        {label:'Intentadas',data:estudiantes.map(e=>Object.keys(e.misionesToc).length-e.completadas),backgroundColor:'rgba(255,77,87,.4)',borderRadius:4},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+      plugins:{legend:{display:true,labels:{color:'#888',font:{size:10},boxWidth:10}}},
+      scales:{
+        x:{max:20,ticks:{stepSize:2,color:'#888',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'},stacked:true},
+        y:{ticks:{color:'#ccc',font:{size:11}},grid:{display:false},stacked:true}
+      }
+    }
+  });
+
+  // PRIMER FALLO
+  const fallos = procesarFallos(rows);
+  const maxFallo = fallos.length>0?fallos[0][1]:1;
+  const falloColors = ['#FF4D57','#FF9800','#FFD700','#00C853'];
+  document.getElementById('fallos-container').innerHTML = fallos.slice(0,6).map(([f,c],i)=>`
+    <div class="fallo-row">
+      <div class="fallo-lbl">${f}</div>
+      <div class="fallo-bar">
+        <div class="fallo-fill" style="width:${Math.round(c/maxFallo*100)}%;background:${falloColors[i]||'#888'};color:#000">
+          ${c>1?c:''}
+        </div>
+      </div>
+      <div class="fallo-count">${c}</div>
+    </div>`).join('') || '<div style="color:var(--muted);font-size:12px">Sin fallos registrados</div>';
+
+  // MOTIVACIÓN
+  document.getElementById('motivacion-container').innerHTML = estudiantes.slice(0,6).map(e=>`
+    <div class="motiv-row">
+      <div class="motiv-nombre">${e.nombre.split(' ')[0]} ${(e.nombre.split(' ')[1]||'').charAt(0)}.</div>
+      <div class="motiv-msg">${getMensaje(e.precProm)}</div>
+    </div>`).join('');
+
+  // RANKING
+  const medals = ['🥇','🥈','🥉'];
+  document.getElementById('ranking-body').innerHTML = estudiantes.map((e,i)=>{
+    const pcls = e.precProm>=90?'pb-g':e.precProm>=70?'pb-y':'pb-r';
+    const barra = '█'.repeat(Math.min(e.completadas,20))+'░'.repeat(20-Math.min(e.completadas,20));
+    return `<tr>
+      <td class="rank-pos">${medals[i]||((i+1)+'º')}</td>
+      <td class="rank-nombre">${e.nombre}</td>
+      <td><span class="nivel-pill ${e.nivel.cls}">${e.nivel.label}</span></td>
+      <td style="text-align:center">${e.sesiones}</td>
+      <td style="text-align:center">${e.completadas}</td>
+      <td style="text-align:center;color:var(--gold);font-weight:700">${e.insignias.length}</td>
+      <td style="text-align:center"><span class="prec-badge ${pcls}">${e.precProm}%</span></td>
+      <td style="text-align:center;color:${e.errores>0?'#FF4D57':'#00C853'};font-weight:700">${e.errores}</td>
+      <td style="text-align:center;font-family:Orbitron,monospace;color:var(--gold)">${e.puntos}</td>
+      <td><span class="barra-txt" style="font-size:9px"><span>${'█'.repeat(Math.min(e.completadas,10))}</span>${'░'.repeat(10-Math.min(e.completadas,10))} ${e.completadas}/20</span></td>
+    </tr>`;
+  }).join('');
+
+  // ALERTAS
+  const alertas = estudiantes.filter(e=>e.errores>0).sort((a,b)=>b.errores-a.errores);
+  if(alertas.length>0){
+    document.getElementById('alertas-container').innerHTML = `
+      <div class="alerta-card">
+        <div class="alerta-header"><div class="alerta-dot"></div><div class="alerta-title">🚨 ALERTAS PEDAGÓGICAS</div></div>
+        ${alertas.map(e=>{
+          const p = e.errores>=5?['prio-alta','ALTA']:e.errores>=3?['prio-media','MEDIA']:['prio-baja','BAJA'];
+          const rec = e.errores>=5?'Intervención inmediata':e.errores>=3?'Refuerzo individual':'Monitoreo';
+          return `<div class="alerta-row">
+            <div class="alerta-nombre">${e.nombre.split(' ')[0]} ${(e.nombre.split(' ')[1]||'').charAt(0)}.</div>
+            <div class="alerta-errs">${e.errores} err. críticos</div>
+            <span class="alerta-prio ${p[0]}">${p[1]}</span>
+            <div class="alerta-rec">${rec}</div>
+          </div>`;
+        }).join('')}
+      </div>`;
+  } else {
+    document.getElementById('alertas-container').innerHTML = `
+      <div class="alerta-card" style="border-color:rgba(0,255,136,.2);background:rgba(0,255,136,.04)">
+        <div class="alerta-title" style="color:var(--green)">✅ SIN ALERTAS</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px">Todo el grupo dentro de parámetros normales.</div>
+      </div>`;
+  }
+
+  // INSIGNIAS
+  const todasInsignias = [];
+  estudiantes.forEach(e=>{
+    e.insignias.forEach(m=>{
+      todasInsignias.push({mision:m,estudiante:e.nombre.split(' ')[0],ins:INSIGNIAS[m]});
+    });
+  });
+  const sinInsignias = MISIONES.filter(m=>!todasInsignias.find(i=>i.mision===m));
+
+  document.getElementById('insignias-container').innerHTML =
+    todasInsignias.map(i=>`
+      <div class="ins-card ins-ganada">
+        <div class="ins-icon">${i.ins?i.ins.icon:'🏅'}</div>
+        <div class="ins-info">
+          <div class="ins-nombre">${i.ins?i.ins.nombre:i.mision}</div>
+          <div class="ins-estudiante">${i.estudiante}</div>
+        </div>
+      </div>`).join('') +
+    sinInsignias.slice(0,6).map(m=>`
+      <div class="ins-card ins-pendiente">
+        <div class="ins-icon">${INSIGNIAS[m]?INSIGNIAS[m].icon:'🔒'}</div>
+        <div class="ins-info">
+          <div class="ins-nombre">${INSIGNIAS[m]?INSIGNIAS[m].nombre:m}</div>
+          <div class="ins-estudiante">Sin ganar</div>
+        </div>
+      </div>`).join('');
+}
+
+// ══ INIT ══
+async function init(){
+  const rows = await cargarDatos();
+  const estudiantes = procesarDatos(rows);
+  document.getElementById('loading').style.display='none';
+  document.getElementById('dashboard').style.display='block';
+  render(estudiantes, rows);
+}
+
+init();
+// Auto-refresh cada 5 minutos
+setInterval(()=>{
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('loading').style.display='flex';
+  // Destruir charts existentes
+  Chart.helpers.each(Chart.instances,(c)=>c.destroy());
+  init();
+}, 5 * 60 * 1000);
+</script>
+</body>
+</html>

@@ -237,7 +237,7 @@ body { background:var(--bg); color:var(--text); font-family:'Exo 2',sans-serif; 
 
 <script>
 // ══ CONFIGURACIÓN ══
-'https://script.google.com/macros/s/AKfycbzdgEimwHUvIZz3expOqeJni9Ka6WNW-Pa2vGhAGszI-TZ-0s41J2IWxwxXMFJbb6Xs/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyoKQqkDHmBuQr4s7wA1KnKZZcOeXkgqN-lcJqZeP9a3mxgm6DB0oMDKfm1xsZQNgc/exec';
 
 const INSIGNIAS = {
   'E1':{icon:'🚶',nombre:'Primer Respondedor'},
@@ -281,17 +281,37 @@ function getMensaje(prec){
 
 // ══ CARGAR DATOS DESDE SHEETS ══
 async function cargarDatos(){
-  try {
-    const resp = await fetch(SHEETS_URL + '?dashboard=1&_=' + Date.now(), {
-      method: 'GET',
-      mode: 'cors',
-    });
-    const json = await resp.json();
-    if(json && json.rows && json.rows.length > 0) return json.rows;
-  } catch(e){
-    console.log('Usando datos demo:', e.message);
-  }
-  return getDemoData();
+  return new Promise((resolve) => {
+    // JSONP — única forma de leer Apps Script desde GitHub Pages
+    const callbackName = 'rcpCallback_' + Date.now();
+    const script = document.createElement('script');
+
+    window[callbackName] = function(data){
+      delete window[callbackName];
+      document.body.removeChild(script);
+      if(data && data.rows && data.rows.length > 0){
+        resolve(data.rows);
+      } else {
+        resolve(getDemoData());
+      }
+    };
+
+    script.onerror = function(){
+      delete window[callbackName];
+      resolve(getDemoData());
+    };
+
+    // Timeout de 8 segundos
+    setTimeout(()=>{
+      if(window[callbackName]){
+        delete window[callbackName];
+        resolve(getDemoData());
+      }
+    }, 8000);
+
+    script.src = SHEETS_URL + '?dashboard=1&callback=' + callbackName + '&_=' + Date.now();
+    document.body.appendChild(script);
+  });
 }
 
 function getDemoData(){
